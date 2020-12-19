@@ -1,0 +1,511 @@
+/* Main Sınıfı */
+
+
+import java.util.ArrayList;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class Main {
+    static BlockingQueue<Integer> yukari_kisi = new LinkedBlockingQueue<Integer>();
+    static BlockingQueue<Integer> yukari_hedef = new LinkedBlockingQueue<Integer>();
+    static BlockingQueue<Integer> asagi_kisi = new LinkedBlockingQueue<Integer>();
+    static BlockingQueue<Integer> asagi_hedef = new LinkedBlockingQueue<Integer>();
+
+    static ArrayList<Kontrol> kontrolDizi = new ArrayList<>();
+    static ArrayList<Asansor> asansorDizi = new ArrayList<>();
+    static ArrayList<Yon> asagiDizi = new ArrayList<>();
+    static ArrayList<Yon> yukariDizi = new ArrayList<>();
+
+    static int[] katlar = new int[5];
+
+    //static int toplamgiris = 0;
+
+    public static void main(String[] args) {
+
+        Giris giris = new Giris();
+        giris.start();
+
+        Cikis cikis = new Cikis();
+        cikis.start();
+        
+        Asansor asansor1 = new Asansor("1.Asansor", true);
+        asansorDizi.add(asansor1);
+        Asansor asansor2 = new Asansor("2.Asansor", false);
+        asansorDizi.add(asansor2);
+        Asansor asansor3 = new Asansor("3.Asansor", false);
+        asansorDizi.add(asansor3);
+        Asansor asansor4 = new Asansor("4.Asansor", false);
+        asansorDizi.add(asansor4);
+        Asansor asansor5 = new Asansor("5.Asansor", false);
+        asansorDizi.add(asansor5);
+        
+        asansor1.start();
+        asansor2.start();
+        asansor3.start();
+        asansor4.start();
+        asansor5.start();
+        
+        Kontrol kontrol = new Kontrol(0, 0);
+        kontrolDizi.add(kontrol);
+        Kontrol kontrol1 = new Kontrol(1, 0);
+        kontrolDizi.add(kontrol1);
+        Kontrol kontrol2 = new Kontrol(2, 0);
+        kontrolDizi.add(kontrol2);
+        Kontrol kontrol3 = new Kontrol(3, 0);
+        kontrolDizi.add(kontrol3);
+        Kontrol kontrol4 = new Kontrol(4, 0);
+        kontrolDizi.add(kontrol4);
+        
+        kontrol.start();
+        kontrol1.start();
+        kontrol2.start();
+        kontrol3.start();
+        kontrol4.start();
+        
+        /*try {
+            Thread.sleep(2000);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }*/
+        
+        while (true) {
+            for (int i = 0; i < katlar.length; i++) {
+                System.out.println(i + ". Kattaki Kişi Sayısı : " + katlar[i]);
+            }
+            System.out.println("**********************\r\n");
+            
+            asansorDizi.forEach((e) -> {
+                System.out.println(e.getIsim());
+                
+                if(e.isDurum()) System.out.println("Durum \t\t: Aktif / Çalışıyor");
+                else System.out.println("Durum \t\t: Pasif / Beklemede");
+                
+                System.out.println("Bulunduğu Kat \t: " + e.getBulundugu_kat());
+                
+                if(e.getHedef() == -1) System.out.println("Hedef Kat \t: 0");
+                else System.out.println("Hedef Kat \t: " + e.getHedef());
+                
+                System.out.println("Yön \t\t: " + e.getYon());
+                System.out.println("Kapasite \t: " + e.getKapasite());
+                
+                if(e.getIcindeki_kisi() == -1) System.out.println("İçindeki Kişi \t: 0");
+                else System.out.println("İçindeki Kişi \t: " + e.getIcindeki_kisi());
+                System.out.println("---------------------------------------------\r\n\r\n");
+            });
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        
+
+    }
+}
+
+
+/* Giriş Sınıfı */
+
+
+import java.util.Random;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+
+public class Giris extends Thread {
+    Random random = new Random();
+    private int kisi,hedef;
+    
+    private Lock lock = new ReentrantLock(); // senkranizasyon görevi görüyor.
+    
+    @Override
+    public void run() {
+        for(;;){
+            lock.lock();
+            kisi = random.nextInt(10) + 1;
+            hedef = random.nextInt(4) + 1;
+            
+            try {
+                Yon yon = new Yon(kisi, hedef, 0);
+                Main.yukariDizi.add(yon);
+                Main.yukari_hedef.put(hedef);
+                Main.yukari_kisi.put(kisi);
+                Main.katlar[0] += kisi;
+                Thread.sleep(500);
+                
+                System.out.println("Giris Thread Çalışıyor.");
+                System.out.println("hedef:" + Main.yukari_hedef);
+                System.out.println("kisi : " + Main.yukari_kisi);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Giris.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            lock.unlock();
+            
+        }
+    }
+    
+}
+
+
+/* Çıkış  Sınıfı */
+
+
+import java.util.Random;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+
+public class Cikis extends Thread {
+    Random random = new Random();
+    private int kisi,hedef;
+    
+    private Lock lock = new ReentrantLock(); // senkranizasyon görevi görüyor.
+    
+    @Override
+    public void run() {
+        for(;;){
+            lock.lock();
+            kisi = random.nextInt(5) + 1;
+            hedef = random.nextInt(4) + 1;
+            
+            try {
+                if(Main.katlar[hedef] >= kisi){
+                    Yon yon = new Yon(kisi, hedef, 1);
+                    Main.asagiDizi.add(yon);
+                    Main.asagi_kisi.put(kisi);
+                    Main.asagi_hedef.put(hedef);
+                }
+                else {
+                    continue;
+                }
+                Thread.sleep(1000);
+                System.out.println("Çıkış Thread Çalışıyor.");
+                System.out.println("çıkış hedef:" + Main.asagi_hedef);
+                System.out.println("çıkış kisi : " + Main.asagi_kisi);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Cikis.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            lock.unlock();
+        }
+    }
+    
+}
+
+
+/* Asansör Sınıfı */
+
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class Asansor extends Thread {
+
+    public String isim;
+    public int kapasite = 10;
+    public int bulundugu_kat = 0;
+    public String yon = "yukari";
+    public boolean durum = false; // aktif / pasif durumunu tutar
+    public int icindeki_kisi = -1;
+    public int hedef = -1;
+    public int ensongeldigikat; // aşağı inerken kata getirdiğini geri götürmeye çalışabilir diye ekledik.
+    
+    private Lock lock = new ReentrantLock(); // senkranizasyon görevi görüyor.
+
+    public Asansor(String isim, boolean durum) {
+        this.isim = isim;
+        this.durum = durum;
+    }
+
+    @Override
+    public void run() {
+        for (;;) {
+            lock.lock();
+            try {
+                if (durum == true) {
+                    if ("yukari".equals(yon)) {
+                        if (icindeki_kisi == -1 && hedef == -1) {
+                            icindeki_kisi = Main.yukariDizi.get(0).getKisi();
+                            hedef = Main.yukariDizi.get(0).getHedef();
+                            Main.katlar[0] -= icindeki_kisi;
+                            Main.yukariDizi.remove(0);
+                            Main.yukari_kisi.take();
+                            Main.yukari_hedef.take();
+                        }
+
+                        if (bulundugu_kat < hedef) {
+                            bulundugu_kat++;
+                        } else if (bulundugu_kat == hedef) {
+                            ensongeldigikat = hedef;
+                            Main.katlar[hedef] += icindeki_kisi; // girişten gelenleri bu kata ekliyoruz.
+                             // girişten gelenleri siliyoruz.
+                            Main.kontrolDizi.get(0).setKisisayisi(Main.katlar[hedef]);
+                            yon = "asagi";
+                            hedef = -1;
+                            icindeki_kisi = -1;
+                        }
+                        if (bulundugu_kat == 4) {
+                            yon = "asagi";
+                            hedef = -1;
+                            icindeki_kisi = -1;
+                        }
+                        //System.out.println("Yukarı gidiyor. Hedef : " + hedef + "Bulunudugu Kat : " + bulundugu_kat);
+                    } else if ("asagi".equals(yon)) {
+                        if (Main.asagiDizi.size() > 0) {
+                            //System.out.println("sss - " + Main.asagiDizi.get(0).getKisi());
+                            if (ensongeldigikat != bulundugu_kat) {
+                                if (Main.asagiDizi.get(0).getKisi() <= Main.katlar[bulundugu_kat]) {
+                                    if (icindeki_kisi == -1 && hedef == -1) {
+                                        icindeki_kisi = Main.asagiDizi.get(0).getKisi();//Main.yukari_kisi.take();
+                                        hedef = Main.asagiDizi.get(0).getHedef();//Main.yukari_hedef.take();
+                                        Main.katlar[bulundugu_kat] -= icindeki_kisi;
+                                        Main.kontrolDizi.get(bulundugu_kat).setKisisayisi(Main.katlar[bulundugu_kat]);
+                                        Main.asagiDizi.remove(0);
+                                        Main.asagi_kisi.take();
+                                        Main.asagi_hedef.take();
+                                    }
+                                }
+                            }
+
+                        }
+                        if (bulundugu_kat > 0) {
+                            bulundugu_kat--;
+                        }
+                        if (bulundugu_kat == 0) {
+                            yon = "yukari";
+                            hedef = -1;
+                            icindeki_kisi = -1;
+                        }
+
+                        //System.out.println("Aşağı gidiyor. Hedef : " + hedef + "Bulunudugu Kat : " + bulundugu_kat);
+                    }
+                }
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Asansor.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            lock.unlock();
+        }
+    }
+
+    public String getIsim() {
+        return isim;
+    }
+
+    public void setIsim(String isim) {
+        this.isim = isim;
+    }
+
+    public int getHedef() {
+        return hedef;
+    }
+
+    public void setHedef(int hedef) {
+        this.hedef = hedef;
+    }
+
+    public int getIcindeki_kisi() {
+        return icindeki_kisi;
+    }
+
+    public void setIcindeki_kisi(int icindeki_kisi) {
+        this.icindeki_kisi = icindeki_kisi;
+    }
+
+    public int getKapasite() {
+        return kapasite;
+    }
+
+    public void setKapasite(int kapasite) {
+        this.kapasite = kapasite;
+    }
+
+    public int getBulundugu_kat() {
+        return bulundugu_kat;
+    }
+
+    public void setBulundugu_kat(int bulundugu_kat) {
+        this.bulundugu_kat = bulundugu_kat;
+    }
+
+    public String getYon() {
+        return yon;
+    }
+
+    public void setYon(String yon) {
+        this.yon = yon;
+    }
+
+    public boolean isDurum() {
+        return durum;
+    }
+
+    public void setDurum(boolean durum) {
+        this.durum = durum;
+    }
+
+}
+
+
+/* Kontrol Sınıfı */
+
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+
+public class Kontrol extends Thread{
+    private int kat;
+    private int toplam = 0;
+    private int kisisayisi;
+    private int m = 0;
+    
+    private Lock lock = new ReentrantLock(); // senkranizasyon görevi görüyor.
+
+    public Kontrol(int kat, int kisisayisi) {
+        this.kat = kat;
+        this.kisisayisi = kisisayisi;
+    }
+
+    @Override
+    public void run() {
+        for(;;){
+            lock.lock();
+            try {
+                Thread.sleep(150);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Kontrol.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            for (int i = 0; i < 5; i++) {
+                toplam = toplam + Main.kontrolDizi.get(i).getKisisayisi();
+            }
+            
+            m = 0;
+            
+            if(toplam < 20){
+                Main.asansorDizi.forEach((e) -> {
+                    if(m == 0){
+                        e.durum = true;
+                    } else {
+                        e.durum = false;
+                    }
+                    m++;
+                });
+            }
+            else if(toplam >= 20 && toplam < 40){
+                Main.asansorDizi.forEach((e) -> {
+                    if(m < 2){
+                        e.durum = true;
+                    } else {
+                        e.durum = false;
+                    }
+                    m++;
+                });
+            }
+            else if(toplam >= 40 && toplam < 60){
+                Main.asansorDizi.forEach((e) -> {
+                    if(m < 3){
+                        e.durum = true;
+                    } else {
+                        e.durum = false;
+                    }
+                    m++;
+                });
+            }
+            else if(toplam >= 60 && toplam < 80){
+                Main.asansorDizi.forEach((e) -> {
+                    if(m < 4){
+                        e.durum = true;
+                    } else {
+                        e.durum = false;
+                    }
+                    m++;
+                });
+            }
+            else {
+                Main.asansorDizi.forEach((e) -> {
+                    e.durum = true;
+                });
+            }
+            lock.unlock();
+        }
+    }
+
+    public int getKisisayisi() {
+        return kisisayisi;
+    }
+
+    public void setKisisayisi(int kisisayisi) {
+        this.kisisayisi = kisisayisi;
+    }
+
+    public int getKat() {
+        return kat;
+    }
+
+    public void setKat(int kat) {
+        this.kat = kat;
+    }
+
+    public int getToplam() {
+        return toplam;
+    }
+
+    public void setToplam(int toplam) {
+        this.toplam = toplam;
+    }
+    
+    
+}
+
+/* Yön Sınıfı */
+
+
+public class Yon {
+    private int kisi;
+    private int hedef = 0;
+    private int yon = 0; // 0 : yukari 1 : asagi
+
+    public Yon(int kisi, int hedef, int yon) {
+        this.kisi = kisi;
+        this.hedef = hedef;
+        this.yon = yon;
+    }
+
+    public int getKisi() {
+        return kisi;
+    }
+
+    public void setKisi(int kisi) {
+        this.kisi = kisi;
+    }
+
+    public int getHedef() {
+        return hedef;
+    }
+
+    public void setHedef(int hedef) {
+        this.hedef = hedef;
+    }
+
+    public int getYon() {
+        return yon;
+    }
+
+    public void setYon(int yon) {
+        this.yon = yon;
+    }
+    
+    
+}
